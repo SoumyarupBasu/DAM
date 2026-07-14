@@ -1406,7 +1406,12 @@ function save_collection($ref, $coldata = array())
     }
 
     // If collection is set as private by caller code, disable incompatible properties used for COLLECTION_TYPE_FEATURED (set by the user or exsting)
-    if (isset($sqlset["public"]) && $sqlset["public"] == 0) {
+    // If $featured_collections_allow_private is enabled, featured collections keep their type/parent/thumbnail
+    // settings when made private so they remain part of the Featured Collections tree.
+    $fc_keep_private = (bool) ($GLOBALS["featured_collections_allow_private"] ?? false);
+    $fc_is_featured = ($oldcoldata["type"] == COLLECTION_TYPE_FEATURED && !isset($sqlset["type"]))
+        || (isset($sqlset["type"]) && $sqlset["type"] == COLLECTION_TYPE_FEATURED);
+    if (isset($sqlset["public"]) && $sqlset["public"] == 0 && !($fc_keep_private && $fc_is_featured)) {
         $sqlset["type"] = COLLECTION_TYPE_STANDARD;
         $sqlset["parent"] = null;
         $sqlset["thumbnail_selection_method"] = null;
@@ -5191,9 +5196,16 @@ function get_featured_collections(int $parent, array $ctx)
         return $allfcs;
     }
 
+    $browse_all = (bool) ($GLOBALS["featured_collections_browse_all"] ?? false);
     $validcollections = array();
     foreach ($allfcs as $fc) {
         if (featured_collection_check_access_control($fc["ref"])) {
+            $validcollections[] = $fc;
+        } elseif ($browse_all && !checkperm("-j" . $fc["ref"])) {
+            // Browse-all mode: include featured collections the user cannot access as view-only (locked)
+            // entries so the full tree remains visible. Explicitly denied collections (-jX) stay hidden.
+            // Action permissions (select/edit/upload/share) are NOT granted - see render_featured_collections().
+            $fc["fc_access_denied"] = true;
             $validcollections[] = $fc;
         }
     }

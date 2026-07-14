@@ -1643,6 +1643,20 @@ $themes_simple_images = true;
 // IMPORTANT: access control must still be enforced through permissions. DO NOT rely on this configuration to hide featured collections from users!
 $featured_collections_root_collection = 0;
 
+// Allow featured collections to be made private without being demoted to a standard collection.
+// When enabled, setting a featured collection to private keeps its type, parent and thumbnail settings,
+// so it remains visible in the Featured Collections tree (subject to permissions). Access to its
+// contents is still governed by the 'public' flag and the j* permission model.
+// Set to false to restore the stock ResourceSpace behaviour (private = demoted to standard collection).
+$featured_collections_allow_private = true;
+
+// Show ALL featured collections/categories in the Featured Collections tree regardless of j* access
+// permissions. Folders the user cannot access are rendered as locked (view-only, not clickable).
+// Explicitly denied collections (-jX permissions) remain hidden. Action permissions (edit/upload/
+// manage) are unaffected - users can only work on folders they have access to.
+// Set to false to restore the stock ResourceSpace behaviour (inaccessible folders are hidden).
+$featured_collections_browse_all = false;
+
 // Ask the user the intended usage when downloading
 $download_usage = false;
 // include email address field in download usage form

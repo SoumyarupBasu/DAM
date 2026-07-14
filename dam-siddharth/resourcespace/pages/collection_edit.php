@@ -103,9 +103,12 @@ if (getval("submitted", "") != "" && enforcePostRequest(false)) {
         }
     }
 
+    // Making a featured collection category private is allowed when $featured_collections_allow_private
+    // is enabled, because the category keeps its type/parent and its children remain attached.
+    $fc_allow_private = (bool) ($GLOBALS["featured_collections_allow_private"] ?? false);
     if (
         (
-            $coldata["public"] == 0
+            ($coldata["public"] == 0 && !$fc_allow_private)
             || (
                 isset($coldata["featured_collections_changes"]["update_parent"])
                 && $coldata["featured_collections_changes"]["update_parent"] == 0

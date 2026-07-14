@@ -4878,6 +4878,8 @@ function render_featured_collections(array $ctx, array $items)
         $render_ctx = $ctx;
         $is_featured_collection_category = is_featured_collection_category($fc);
         $is_featured_collection = (!$is_featured_collection_category && !$is_smart_featured_collection);
+        // Browse-all mode: user can see this featured collection but has no access to it (locked/view-only)
+        $fc_locked = !empty($fc["fc_access_denied"]);
 
         $tool_edit = array(
             "href" => generateURL("{$baseurl_short}pages/collection_edit.php",

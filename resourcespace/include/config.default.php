@@ -1643,6 +1643,21 @@ $themes_simple_images = true;
 // IMPORTANT: access control must still be enforced through permissions. DO NOT rely on this configuration to hide featured collections from users!
 $featured_collections_root_collection = 0;
 
+// When generating a share for a featured collection category, automatically make all of its descendant featured
+// collections private (cascading privacy) so the share can be created in a single action. Only the descendants of the
+// shared folder are affected - sibling and parent folders are never touched.
+$featured_collection_cascade_privacy_on_share = true;
+
+// Keep featured collections that have been made private visible in the featured collections tree (under their original
+// parent). Their previous type/parent is remembered in the fc_restore_type/fc_restore_parent columns so tree membership
+// and breadcrumbs are preserved. Access to the contents is still controlled by the standard permissions/privacy checks.
+$featured_collections_include_private = true;
+
+// Show the full featured collections listing to all users, including folders they have no explicit "j" permission for.
+// Folders without permission are shown as read-only (no action tools) and any attempt to act on them is blocked by the
+// standard permission checks. Folders explicitly denied via a "-j" permission (including inherited denies) stay hidden.
+$featured_collections_browse_all = true;
+
 // Ask the user the intended usage when downloading
 $download_usage = false;
 // include email address field in download usage form

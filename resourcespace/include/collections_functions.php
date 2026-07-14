@@ -5203,6 +5203,7 @@ function get_featured_collections(int $parent, array $ctx)
     // Include collections that used to be featured but were made private ($featured_collections_include_private).
     // Their previous membership is remembered in fc_restore_type/fc_restore_parent so they keep their place in the tree.
     $wheresql = "c.`type` = ? AND c.parent $parentquery";
+    $childjoin = "c.ref = cc.parent";
     if ($include_private) {
         $params = array_merge($params, array("i", COLLECTION_TYPE_FEATURED));
         $restore_parentquery = $parentquery;
@@ -5211,6 +5212,9 @@ function get_featured_collections(int $parent, array $ctx)
             $params[] = $parent;
         }
         $wheresql = "(($wheresql) OR (c.fc_restore_type = ? AND c.fc_restore_parent $restore_parentquery))";
+        // Count remembered private members as children too so categories keep rendering as navigable
+        // categories (and breadcrumb drill-down keeps working) when all their children were made private
+        $childjoin = "c.ref = COALESCE(cc.parent, cc.fc_restore_parent)";
     }
 
     $allfcs = ps_query("SELECT DISTINCT c.ref,
@@ -5226,7 +5230,7 @@ function get_featured_collections(int $parent, array $ctx)
                       count(DISTINCT cc.ref) > 0 AS has_children
                  FROM collection AS c
             LEFT JOIN collection_resource AS cr ON c.ref = cr.collection
-            LEFT JOIN collection AS cc ON c.ref = cc.parent
+            LEFT JOIN collection AS cc ON $childjoin
                 WHERE $wheresql
              GROUP BY c.ref
              ORDER BY c.order_by", $params);

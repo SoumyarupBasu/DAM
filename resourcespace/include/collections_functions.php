@@ -5137,11 +5137,25 @@ function delete_old_collections($userref = 0, $days = 30)
 */
 function get_all_featured_collections()
 {
+    $include_private = (bool) ($GLOBALS["featured_collections_include_private"] ?? false);
+
+    // Include collections that used to be featured but were made private ($featured_collections_include_private).
+    // Their previous membership is remembered in fc_restore_type/fc_restore_parent so they keep their place in the tree.
+    $wheresql = "c.`type` = ?";
+    $childjoin = "c.ref = cc.parent";
+    $params = array("i", COLLECTION_TYPE_FEATURED);
+    if ($include_private) {
+        $wheresql = "(c.`type` = ? OR c.fc_restore_type = ?)";
+        $childjoin = "c.ref = COALESCE(cc.parent, cc.fc_restore_parent)";
+        $params[] = "i";
+        $params[] = COLLECTION_TYPE_FEATURED;
+    }
+
     return ps_query(
         "SELECT DISTINCT c.ref,
                       c.`name`,
-                      c.`type`,
-                      c.parent,
+                      COALESCE(c.fc_restore_type, c.`type`) AS `type`,
+                      COALESCE(c.parent, c.fc_restore_parent) AS parent,
                       c.thumbnail_selection_method,
                       c.bg_img_resource_ref,
                       c.created,
@@ -5149,10 +5163,10 @@ function get_all_featured_collections()
                       count(DISTINCT cc.ref) > 0 AS has_children
                  FROM collection AS c
             LEFT JOIN collection_resource AS cr ON c.ref = cr.collection
-            LEFT JOIN collection AS cc ON c.ref = cc.parent
-                WHERE c.`type` = ?
+            LEFT JOIN collection AS cc ON $childjoin
+                WHERE $wheresql
              GROUP BY c.ref",
-        array("i",COLLECTION_TYPE_FEATURED),
+        $params,
         "featured_collections"
     );
 }
@@ -5189,6 +5203,7 @@ function get_featured_collections(int $parent, array $ctx)
     // Include collections that used to be featured but were made private ($featured_collections_include_private).
     // Their previous membership is remembered in fc_restore_type/fc_restore_parent so they keep their place in the tree.
     $wheresql = "c.`type` = ? AND c.parent $parentquery";
+    $childjoin = "c.ref = cc.parent";
     if ($include_private) {
         $params = array_merge($params, array("i", COLLECTION_TYPE_FEATURED));
         $restore_parentquery = $parentquery;
@@ -5197,6 +5212,9 @@ function get_featured_collections(int $parent, array $ctx)
             $params[] = $parent;
         }
         $wheresql = "(($wheresql) OR (c.fc_restore_type = ? AND c.fc_restore_parent $restore_parentquery))";
+        // Count remembered private members as children too so categories keep rendering as navigable
+        // categories (and breadcrumb drill-down keeps working) when all their children were made private
+        $childjoin = "c.ref = COALESCE(cc.parent, cc.fc_restore_parent)";
     }
 
     $allfcs = ps_query("SELECT DISTINCT c.ref,
@@ -5212,7 +5230,7 @@ function get_featured_collections(int $parent, array $ctx)
                       count(DISTINCT cc.ref) > 0 AS has_children
                  FROM collection AS c
             LEFT JOIN collection_resource AS cr ON c.ref = cr.collection
-            LEFT JOIN collection AS cc ON c.ref = cc.parent
+            LEFT JOIN collection AS cc ON $childjoin
                 WHERE $wheresql
              GROUP BY c.ref
              ORDER BY c.order_by", $params);
@@ -5310,6 +5328,10 @@ function featured_collection_check_access_control(int $c_ref)
     } elseif (checkperm("j*") || checkperm("j" . $c_ref)) {
         return true;
     } else {
+        // Follow remembered ancestry for private (demoted) featured collections ($featured_collections_include_private)
+        $fc_walk_private = (bool) ($GLOBALS["featured_collections_include_private"] ?? false);
+        $parentcol = ($fc_walk_private ? "COALESCE(parent, fc_restore_parent)" : "parent");
+        $parentcol_c = ($fc_walk_private ? "COALESCE(c.parent, c.fc_restore_parent)" : "c.parent");
         // Get all parents. Query varies according to MySQL cte support
         $mysql_version = ps_query('SELECT LEFT(VERSION(), 3) AS ver');
         if (version_compare($mysql_version[0]['ver'], '8.0', '>=')) {
@@ -5318,13 +5340,13 @@ function featured_collection_check_access_control(int $c_ref)
                 WITH RECURSIVE cte(ref,parent, level) AS
                         (
                         SELECT  ref,
-                                parent,
+                                $parentcol AS parent,
                                 1 AS level
                           FROM  collection
                          WHERE  ref= ?
                      UNION ALL
                         SELECT  c.ref,
-                                c.parent,
+                                $parentcol_c AS parent,
                                 level+1 AS LEVEL
                           FROM  collection c
                     INNER JOIN  cte
@@ -5346,7 +5368,7 @@ function featured_collection_check_access_control(int $c_ref)
                 "
                     SELECT  C2.ref, C2.parent
                     FROM  (SELECT @r AS p_ref,
-                            (SELECT @r := parent FROM collection WHERE ref = p_ref) AS parent,
+                            (SELECT @r := $parentcol FROM collection WHERE ref = p_ref) AS parent,
                             @l := @l + 1 AS lvl
                     FROM  (SELECT @r := ?, @l := 0) vars,
                             collection c
@@ -5372,6 +5394,35 @@ function featured_collection_check_access_control(int $c_ref)
         }
         return false; // No explicit permission given and user doesn't have f*
     }
+}
+
+/**
+* Check if the user has been EXPLICITLY denied access to a featured collection, either directly (-j<ref>) or inherited
+* from an ancestor category. Used by the full listing mode ($featured_collections_browse_all) where folders without an
+* explicit permission are shown read-only, but explicitly denied folders stay fully hidden.
+*
+* @param integer $c_ref Collection ref to be tested
+*
+* @return boolean Returns TRUE if access has been explicitly denied, FALSE otherwise
+*/
+function featured_collection_check_explicit_deny(int $c_ref)
+{
+    if (checkperm("-j" . $c_ref)) {
+        return true;
+    }
+
+    // Walk up the tree (using remembered ancestry for private folders) looking for an inherited deny
+    $all_fcs_rp = reshape_array_by_value_keys(get_all_featured_collections(), 'ref', 'parent');
+    $visited = array($c_ref => true);
+    $current = $all_fcs_rp[$c_ref] ?? null;
+    while (!is_null($current) && !isset($visited[$current])) {
+        if (checkperm("-j" . $current)) {
+            return true;
+        }
+        $visited[$current] = true;
+        $current = $all_fcs_rp[$current] ?? null;
+    }
+    return false;
 }
 
 /**
@@ -5898,7 +5949,17 @@ function compute_featured_collections_access_control()
         return $CACHE_FC_ACCESS_CONTROL;
     }
 
-    $all_fcs = ps_query("SELECT ref, parent FROM collection WHERE `type` = ?", ['i', COLLECTION_TYPE_FEATURED], "featured_collections");
+    if ((bool) ($GLOBALS["featured_collections_include_private"] ?? false)) {
+        // Include collections that used to be featured but were made private ($featured_collections_include_private)
+        // so remembered members keep their place (and inherited permissions) in the tree.
+        $all_fcs = ps_query(
+            "SELECT ref, COALESCE(parent, fc_restore_parent) AS parent FROM collection WHERE `type` = ? OR fc_restore_type = ?",
+            ['i', COLLECTION_TYPE_FEATURED, 'i', COLLECTION_TYPE_FEATURED],
+            "featured_collections"
+        );
+    } else {
+        $all_fcs = ps_query("SELECT ref, parent FROM collection WHERE `type` = ?", ['i', COLLECTION_TYPE_FEATURED], "featured_collections");
+    }
     $all_fcs_rp = reshape_array_by_value_keys($all_fcs, 'ref', 'parent');
     // Set up arrays to store permitted/blocked featured collections
     $includerefs = array();

@@ -1626,6 +1626,15 @@ div.MessageBox a {
     background: none;  
 }
 
+/* Read-only featured collection tile ($featured_collections_browse_all): visible but the user cannot act on it */
+.FeaturedSimpleTile.FeaturedSimpleTileReadOnly {
+    opacity: 0.65;
+}
+.FeaturedSimpleTile.FeaturedSimpleTileReadOnly .FeaturedSimpleTileContents h2 .fa-lock {
+    font-size: 0.7em;
+    vertical-align: middle;
+}
+
 .FeaturedImageTile
 {
     width:77px;

@@ -1,0 +1,9 @@
+name: educational_content_organizer
+title: Educational Content Organizer
+desc: Automatically organizes educational content into hierarchical collections based on subject, grade, state, and content type
+icon: fa fa-graduation-cap
+author: Custom Plugin
+version: 1.0
+default_priority: 100
+category: Workflow And Access
+config_url: /plugins/educational_content_organizer/pages/setup.php

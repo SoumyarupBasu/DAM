@@ -1,0 +1,10 @@
+{
+    "name": "resourcespace/tus-integration",
+    "description": "TUS PHP integration for ResourceSpace",
+    "require": {
+        "ankitpokhrel/tus-php": "^2.0"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

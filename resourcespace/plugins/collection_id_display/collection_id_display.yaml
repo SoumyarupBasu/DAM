@@ -1,0 +1,9 @@
+name: collection_id_display
+title: Collection ID Display
+desc: Display collection IDs alongside collection names and enable ID-based search functionality
+icon: fa fa-hashtag
+author: Custom Plugin
+version: 1.0
+default_priority: 100
+category: User Interface
+config_url: /plugins/collection_id_display/pages/setup.php

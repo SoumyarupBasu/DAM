@@ -1,0 +1,45 @@
+# ResourceSpace .gitignore
+
+# Config with secrets - never commit
+include/config.php
+resourcespace/include/config.php
+
+# Filestore (uploaded files) - keep directory structure but ignore contents
+filestore/*
+!filestore/.gitkeep
+resourcespace/filestore/*
+!resourcespace/filestore/.gitkeep
+
+# Temp / cache
+tmp/
+resourcespace/tmp/
+cache/
+resourcespace/cache/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PHP composer
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Auto-generated markdown notes
+*.md
+
+# Preview/thumbnail files
+*pre_*.jpg
+*thm_*.jpg
+*col_*.jpg
+
+# SVN metadata
+.svn/

@@ -1,0 +1,8 @@
+title: Simple Collection Manager
+author: Custom
+version: 1.0
+desc: Simple collection template management with ID display
+info_url: 
+config_url: /plugins/simple_collection_manager/pages/setup.php
+category: Collection Management
+default_priority: 100

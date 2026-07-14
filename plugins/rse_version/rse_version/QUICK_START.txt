@@ -1,0 +1,69 @@
+RSE VERSION AUTO-INCREMENT - QUICK START GUIDE
+==============================================
+
+WHAT WAS ADDED:
+- Automatic version number increment when files are replaced
+- Configuration in plugin setup page
+- Debug logging for troubleshooting
+
+FILES MODIFIED:
+1. plugins/rse_version/config/config.php - Added configuration variables
+2. plugins/rse_version/hooks/all.php - Added auto-increment logic
+3. plugins/rse_version/languages/en.php - Added language strings
+4. plugins/rse_version/pages/setup.php - Added admin configuration options
+
+FILES CREATED:
+1. plugins/rse_version/test_version_increment.php - Test/debug script
+2. plugins/rse_version/AUTO_INCREMENT_VERSION.md - Full documentation
+3. plugins/rse_version/QUICK_START.txt - This file
+
+CONFIGURATION:
+The plugin is already configured for field ID 89 (your versionnum field)
+with minor increments (1.0 -> 1.1 -> 1.2)
+
+TO TEST:
+1. Go to: http://your-site/plugins/rse_version/test_version_increment.php
+2. Check that configuration shows field ID 89
+3. Enter a resource ID to test on
+4. Try replacing a file on a resource
+
+TROUBLESHOOTING:
+If it's not working:
+
+1. CHECK PLUGIN IS ENABLED:
+   Admin -> System -> Plugins -> Ensure "rse_version" is enabled
+
+2. RUN TEST SCRIPT:
+   Access: plugins/rse_version/test_version_increment.php
+   This will show if configuration is correct
+
+3. ENABLE DEBUG MODE:
+   Edit include/config.php
+   Add or set: $debug_log = true;
+   Replace a file and look for "RSE Version:" messages
+
+4. VERIFY FIELD:
+   - Field ID should be 89
+   - Field type should be "Text box (single line)"
+   - Field should have initial value like "1.0"
+
+5. TEST MANUALLY:
+   - Upload a resource
+   - Set version field to "1.0"
+   - Replace the file (not just edit metadata)
+   - Check if version changes to "1.1"
+
+EXPECTED BEHAVIOR:
+- Initial upload: Version stays as you set it (e.g., "1.0")
+- First replacement: Version increments to "1.1"
+- Second replacement: Version increments to "1.2"
+- And so on...
+
+IMPORTANT NOTES:
+- Only triggers on FILE REPLACEMENT, not metadata edits
+- Field must have a value before replacement (e.g., "1.0")
+- Empty fields will be set to "1.0" on first replacement
+- All changes are logged in resource log
+
+NEED HELP?
+Check the full documentation: plugins/rse_version/AUTO_INCREMENT_VERSION.md

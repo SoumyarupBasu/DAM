@@ -1407,10 +1407,25 @@ function save_collection($ref, $coldata = array())
 
     // If collection is set as private by caller code, disable incompatible properties used for COLLECTION_TYPE_FEATURED (set by the user or exsting)
     if (isset($sqlset["public"]) && $sqlset["public"] == 0) {
+        // Remember featured collection membership (type & parent) before demoting so the collection can remain
+        // visible in the featured collections tree and keep its breadcrumb ancestry ($featured_collections_include_private)
+        if (isset($oldcoldata["type"]) && $oldcoldata["type"] == COLLECTION_TYPE_FEATURED) {
+            $sqlset["fc_restore_type"] = COLLECTION_TYPE_FEATURED;
+            $sqlset["fc_restore_parent"] = $oldcoldata["parent"];
+        }
         $sqlset["type"] = COLLECTION_TYPE_STANDARD;
         $sqlset["parent"] = null;
         $sqlset["thumbnail_selection_method"] = null;
         $sqlset["bg_img_resource_ref"] = null;
+    } elseif (
+        // Collection is being made public/featured again - clear any remembered featured collection membership
+        (isset($sqlset["public"]) && $sqlset["public"] == 1)
+        || (isset($sqlset["type"]) && in_array($sqlset["type"], array(COLLECTION_TYPE_FEATURED, COLLECTION_TYPE_PUBLIC)))
+    ) {
+        if (isset($oldcoldata["fc_restore_type"]) && !is_null($oldcoldata["fc_restore_type"])) {
+            $sqlset["fc_restore_type"] = null;
+            $sqlset["fc_restore_parent"] = null;
+        }
     }
 
     /*
@@ -1485,6 +1500,8 @@ function save_collection($ref, $coldata = array())
             'thumbnail_selection_method',
             'bg_img_resource_ref',
             'order_by',
+            'fc_restore_type',
+            'fc_restore_parent',
         ];
         $params = [];
         foreach ($sqlset as $colopt => $colset) {
@@ -1497,11 +1514,11 @@ function save_collection($ref, $coldata = array())
                 $sqlupdate .= ", ";
             }
 
-            if (in_array($colopt, array("type", "parent", "thumbnail_selection_method", "bg_img_resource_ref"))) {
+            if (in_array($colopt, array("type", "parent", "thumbnail_selection_method", "bg_img_resource_ref", "fc_restore_type", "fc_restore_parent"))) {
                 $clear_fc_query_cache = true;
             }
 
-            if (in_array($colopt, array("parent", "thumbnail_selection_method", "bg_img_resource_ref"))) {
+            if (in_array($colopt, array("parent", "thumbnail_selection_method", "bg_img_resource_ref", "fc_restore_type", "fc_restore_parent"))) {
                 $sqlupdate .= $colopt . " = ";
                 if ($colset == 0) {
                     $sqlupdate .= 'NULL';
@@ -5155,7 +5172,8 @@ function get_featured_collections(int $parent, array $ctx)
         return array();
     }
     $access_control = (isset($ctx["access_control"]) && is_bool($ctx["access_control"]) ? $ctx["access_control"] : true);
-
+    $include_private = (bool) ($GLOBALS["featured_collections_include_private"] ?? false);
+    $browse_all = (bool) ($GLOBALS["featured_collections_browse_all"] ?? false);
 
     $params = array("i",COLLECTION_TYPE_FEATURED);
     if ($parent == 0) {
@@ -5168,10 +5186,23 @@ function get_featured_collections(int $parent, array $ctx)
         $params[] = $parent;
     }
 
+    // Include collections that used to be featured but were made private ($featured_collections_include_private).
+    // Their previous membership is remembered in fc_restore_type/fc_restore_parent so they keep their place in the tree.
+    $wheresql = "c.`type` = ? AND c.parent $parentquery";
+    if ($include_private) {
+        $params = array_merge($params, array("i", COLLECTION_TYPE_FEATURED));
+        $restore_parentquery = $parentquery;
+        if ($parent != 0) {
+            $params[] = "i";
+            $params[] = $parent;
+        }
+        $wheresql = "(($wheresql) OR (c.fc_restore_type = ? AND c.fc_restore_parent $restore_parentquery))";
+    }
+
     $allfcs = ps_query("SELECT DISTINCT c.ref,
                       c.`name`,
-                      c.`type`,
-                      c.parent,
+                      COALESCE(c.fc_restore_type, c.`type`) AS `type`,
+                      COALESCE(c.parent, c.fc_restore_parent) AS parent,
                       c.thumbnail_selection_method,
                       c.bg_img_resource_ref,
                       c.order_by,
@@ -5182,8 +5213,7 @@ function get_featured_collections(int $parent, array $ctx)
                  FROM collection AS c
             LEFT JOIN collection_resource AS cr ON c.ref = cr.collection
             LEFT JOIN collection AS cc ON c.ref = cc.parent
-                WHERE c.`type` = ?
-                  AND c.parent $parentquery
+                WHERE $wheresql
              GROUP BY c.ref
              ORDER BY c.order_by", $params);
 
@@ -5193,7 +5223,16 @@ function get_featured_collections(int $parent, array $ctx)
 
     $validcollections = array();
     foreach ($allfcs as $fc) {
-        if (featured_collection_check_access_control($fc["ref"])) {
+        $fc_full_access = featured_collection_check_access_control($fc["ref"]);
+        if ($browse_all) {
+            // Show the full listing ($featured_collections_browse_all): only explicitly denied (-j) folders are hidden.
+            // Folders the user has no permission for are still listed but flagged read-only (no action tools).
+            if (featured_collection_check_explicit_deny((int) $fc["ref"])) {
+                continue;
+            }
+            $fc["readonly"] = !$fc_full_access;
+            $validcollections[] = $fc;
+        } elseif ($fc_full_access) {
             $validcollections[] = $fc;
         }
     }

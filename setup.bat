@@ -145,8 +145,33 @@ goto wait_mysql
 echo  [OK] Apache and MySQL are running.
 
 :: ---------- 7. Create the database if it does not exist ----------
-"%XAMPP_DIR%\mysql\bin\mysql.exe" -u root -e "CREATE DATABASE IF NOT EXISTS resourcespace DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >nul 2>&1
-if %errorlevel% equ 0 (
+set "MYSQL_PWD_DISPLAY=(leave blank)"
+set "DB_OK=0"
+
+:: First attempt: root with NO password (fresh XAMPP default)
+"%XAMPP_DIR%\mysql\bin\mysql.exe" -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS resourcespace DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>"%TEMP%\rs_mysql_err.txt"
+if %errorlevel% equ 0 set "DB_OK=1"
+
+if "%DB_OK%"=="0" (
+    echo  [!!] Could not connect as root with a blank password. MySQL said:
+    type "%TEMP%\rs_mysql_err.txt"
+    echo.
+    echo       Your MySQL root user probably has a password set.
+    set /p MYSQL_ROOT_PW=      Enter your MySQL root password ^(or press Enter to skip^): 
+    if not "!MYSQL_ROOT_PW!"=="" (
+        "%XAMPP_DIR%\mysql\bin\mysql.exe" -h 127.0.0.1 -u root -p"!MYSQL_ROOT_PW!" -e "CREATE DATABASE IF NOT EXISTS resourcespace DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>"%TEMP%\rs_mysql_err.txt"
+        if !errorlevel! equ 0 (
+            set "DB_OK=1"
+            set "MYSQL_PWD_DISPLAY=(the password you just entered)"
+        ) else (
+            echo  [!!] Still could not connect. MySQL said:
+            type "%TEMP%\rs_mysql_err.txt"
+        )
+    )
+)
+del /q "%TEMP%\rs_mysql_err.txt" >nul 2>&1
+
+if "%DB_OK%"=="1" (
     echo  [OK] Database "resourcespace" is ready.
 ) else (
     echo  [!!] Could not create the database automatically. You can create it
@@ -164,7 +189,7 @@ if exist "%RS_DEST%\include\config.php" (
     echo       On the setup page use these database values:
     echo         MySQL server    : localhost
     echo         MySQL username  : root
-    echo         MySQL password  : ^(leave blank^)
+    echo         MySQL password  : %MYSQL_PWD_DISPLAY%
     echo         Database name   : resourcespace
     echo         Base URL        : %RS_URL%
     echo.

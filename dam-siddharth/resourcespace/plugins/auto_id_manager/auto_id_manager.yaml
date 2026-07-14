@@ -1,0 +1,9 @@
+name: auto_id_manager
+title: Auto ID Manager
+desc: Automatically assigns sequential, predictable IDs to new collections and resources based on predefined series
+icon: fa fa-sort-numeric-asc
+author: Custom Plugin
+version: 1.0
+default_priority: 100
+category: System
+config_url: /plugins/auto_id_manager/pages/setup.php

@@ -1,0 +1,8 @@
+name: collection_id_in_name
+title: Collection ID in Name
+desc: Automatically appends collection ID to collection names in format "Name (ID-123)"
+icon: fa fa-hashtag
+author: ResourceSpace Core Developer
+version: 1.0
+default_priority: 100
+category: Collections

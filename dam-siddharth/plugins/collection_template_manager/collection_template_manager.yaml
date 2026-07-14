@@ -1,0 +1,9 @@
+name: collection_template_manager
+title: Collection Template Manager
+desc: Create and copy collection templates with automatic ID assignment for structured content organization
+icon: fa fa-copy
+author: Custom Plugin
+version: 1.0
+default_priority: 100
+category: Workflow And Access
+config_url: /plugins/collection_template_manager/pages/setup.php

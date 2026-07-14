@@ -2318,7 +2318,96 @@ function generate_collection_access_key($collection, $feedback = 0, $email = "",
         );
     }
 
+    // When enabled, sharing a featured collection folder externally automatically makes all of its
+    // descendant featured collections private ($featured_collection_cascade_privacy_on_share).
+    // This must run AFTER key generation so the shared sub collections are resolved beforehand.
+    featured_collection_cascade_privacy($main_collection);
+
     return $k;
+}
+
+/**
+ * Cascade privacy onto all descendant featured collections of an externally shared featured collection folder.
+ *
+ * When $featured_collection_cascade_privacy_on_share is enabled and a featured collection (folder) is shared
+ * externally, every descendant featured collection (sub-folders and their children, at any depth) is demoted to a
+ * private (standard) collection. The previous featured collection membership is remembered in fc_restore_type /
+ * fc_restore_parent so the tree structure and breadcrumbs remain intact (see $featured_collections_include_private)
+ * and the collections can later be restored to the featured tree by making them public again.
+ *
+ * The shared collection itself is NOT demoted - only its descendants are.
+ *
+ * @param  integer|array $collection  Collection ref -or- collection data structure of the shared collection
+ *
+ * @return array  Refs of the collections that were demoted to private
+ */
+function featured_collection_cascade_privacy($collection)
+{
+    global $featured_collection_cascade_privacy_on_share;
+
+    if (empty($featured_collection_cascade_privacy_on_share)) {
+        return array();
+    }
+
+    if (!is_array($collection)) {
+        $collection = get_collection($collection);
+    }
+
+    if ($collection === false || $collection["type"] != COLLECTION_TYPE_FEATURED) {
+        return array();
+    }
+
+    // Walk the featured collections tree to collect ALL descendants of the shared folder (any depth).
+    // This is done directly against the database (not via the cached FC helpers) because we need every
+    // descendant regardless of the current user's access control or whether it holds resources.
+    $demoted = array();
+    $parents = array($collection["ref"]);
+    while (!empty($parents)) {
+        $children = ps_query(
+            "SELECT ref, parent FROM collection WHERE `type` = ? AND parent IN (" . ps_param_insert(count($parents)) . ")",
+            array_merge(array("i", COLLECTION_TYPE_FEATURED), ps_param_fill($parents, "i"))
+        );
+        $parents = array();
+        foreach ($children as $child) {
+            if (!isset($demoted[$child["ref"]])) {
+                $demoted[$child["ref"]] = $child["parent"];
+                $parents[] = $child["ref"];
+            }
+        }
+    }
+
+    if (empty($demoted)) {
+        return array();
+    }
+
+    foreach ($demoted as $fc_ref => $fc_parent) {
+        // Demote to a private standard collection, remembering the featured collection membership so the tree
+        // and breadcrumb ancestry stay intact and the collection can be restored later (mirrors save_collection()).
+        ps_query(
+            "UPDATE collection
+                SET `public` = 0,
+                    `type` = ?,
+                    parent = NULL,
+                    thumbnail_selection_method = NULL,
+                    bg_img_resource_ref = NULL,
+                    fc_restore_type = ?,
+                    fc_restore_parent = ?
+              WHERE ref = ?",
+            array(
+                "i", COLLECTION_TYPE_STANDARD,
+                "i", COLLECTION_TYPE_FEATURED,
+                "i", $fc_parent,
+                "i", $fc_ref,
+            )
+        );
+        clear_query_cache("collection" . $fc_ref);
+    }
+
+    clear_query_cache("collection");
+    clear_query_cache("featured_collections");
+
+    debug("featured_collection_cascade_privacy(ref = {$collection["ref"]}): demoted collections: " . implode(", ", array_keys($demoted)));
+    return array_keys($demoted);
 }
 
 /**

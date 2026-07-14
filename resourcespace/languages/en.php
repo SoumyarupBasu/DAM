@@ -1927,6 +1927,7 @@ $lang["emptycollectionareyousure"] = "Are you sure you want to remove all resour
 
 $lang["error-cannoteditemptycollection"] = "You cannot edit an empty collection.";
 $lang["error-permissiondenied"] = "Permission denied.";
+$lang["featured_collection_readonly"] = "View only - you do not have permission to act on this folder";
 $lang["error-cant-request-all-are-open"] = "You cannot request all resources because you have access to download them all.";
 $lang["error-editpermissiondenied"] = "You do not have edit permissions for some or all of the resources.";
 $lang["error-permissions-login"] = "Please log in to access this page";

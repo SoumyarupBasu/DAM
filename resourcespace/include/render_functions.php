@@ -5153,6 +5153,15 @@ function render_featured_collections(array $ctx, array $items)
             $render_ctx["tools"] = array();
             }
 
+        // Read-only tile ($featured_collections_browse_all): the folder is visible to the user but they have no
+        // permission to act on it. Suppress all action tools and flag the tile for lock treatment. Clicking through
+        // still routes via the standard access checks which show the usual permission-denied state.
+        if (!empty($fc["readonly"]))
+            {
+            $render_ctx["tools"] = array();
+            $render_ctx["readonly"] = true;
+            }
+
         render_featured_collection($render_ctx, $fc);
         }
     }
@@ -5204,6 +5213,17 @@ function render_featured_collection(array $ctx, array $fc)
     $fc_display_name = strip_prefix_chars(i18n_get_collection_name($fc),"*");
 
     $html_contents_h2 = $html_contents_icon . $fc_display_name;
+    // Read-only tile ($featured_collections_browse_all): show a lock next to the folder name
+    if (!empty($ctx["readonly"]))
+        {
+        $html_container_class[] = "FeaturedSimpleTileReadOnly";
+        $fc_readonly_label = escape($lang["featured_collection_readonly"] ?? $lang["error-permissiondenied"]);
+        $html_contents_h2 .= sprintf(
+            ' <i class="fa fa-fw fa-lock" role="img" aria-label="%s" title="%s"></i>',
+            $fc_readonly_label,
+            $fc_readonly_label
+        );
+        }
     $html_contents_h2_style = array();
     if(!$is_smart_featured_collection && $flag_new_themes && (time() - strtotime((string)$fc["created"])) < (60 * 60 * 24 * $flag_new_themes_age))
         {

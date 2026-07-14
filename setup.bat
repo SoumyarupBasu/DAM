@@ -120,15 +120,56 @@ if exist "%PHP_INI%" (
     echo  [OK] PHP configured ^(512M uploads, gd/intl/exif enabled^).
 )
 
-:: ---------- 6. Start Apache and MySQL ----------
+:: ---------- 6. Stop conflicting MySQL servers on port 3306 ----------
+:: A separately installed MySQL (e.g. the "MySQL80" Windows service) on port
+:: 3306 would be answered instead of XAMPP's MySQL and causes errors such as
+:: "Plugin caching_sha2_password could not be loaded".
+for %%S in (MySQL MySQL57 MySQL80 MySQL83 MySQL84 MariaDB) do (
+    sc query "%%S" 2>nul | find /I "RUNNING" >nul && (
+        echo  [..] Stopping conflicting MySQL Windows service "%%S" ^(port 3306^)...
+        net stop "%%S" /y >nul 2>&1
+    )
+)
+:: Kill any mysqld process that is NOT XAMPP's (frees port 3306)
+powershell -NoProfile -Command ^
+    "Get-Process mysqld -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -notlike 'C:\xampp*' } | Stop-Process -Force" >nul 2>&1
+
+:: ---------- 6b. Start Apache and MySQL ----------
 echo  [..] Starting Apache and MySQL...
-tasklist /FI "IMAGENAME eq httpd.exe" 2>nul | find /I "httpd.exe" >nul || start "" /B "%XAMPP_DIR%\apache\bin\httpd.exe"
 tasklist /FI "IMAGENAME eq mysqld.exe" 2>nul | find /I "mysqld.exe" >nul || start "" /B "%XAMPP_DIR%\mysql\bin\mysqld.exe" --defaults-file="%XAMPP_DIR%\mysql\bin\my.ini" --standalone
+tasklist /FI "IMAGENAME eq httpd.exe" 2>nul | find /I "httpd.exe" >nul || start "" /B "%XAMPP_DIR%\apache\bin\httpd.exe"
+
+:: Verify Apache stayed up - if port 80/443 is blocked (error "OS 10013"),
+:: httpd exits immediately. In that case move Apache to ports 8080/8443.
+timeout /t 3 /nobreak >nul
+tasklist /FI "IMAGENAME eq httpd.exe" 2>nul | find /I "httpd.exe" >nul
+if %errorlevel% neq 0 (
+    echo  [!!] Port 80 or 443 is blocked by another program ^(IIS, Skype, VPN...^).
+    echo  [..] Moving Apache to ports 8080/8443 instead...
+    powershell -NoProfile -Command ^
+        "(Get-Content 'C:\xampp\apache\conf\httpd.conf') -replace '^Listen 80$','Listen 8080' -replace '^ServerName localhost:80$','ServerName localhost:8080' | Set-Content 'C:\xampp\apache\conf\httpd.conf';" ^
+        "(Get-Content 'C:\xampp\apache\conf\extra\httpd-ssl.conf') -replace '^Listen 443$','Listen 8443' -replace '<VirtualHost _default_:443>','<VirtualHost _default_:8443>' | Set-Content 'C:\xampp\apache\conf\extra\httpd-ssl.conf'"
+    set "RS_URL=http://localhost:8080/resourcespace"
+    set "PMA_URL=http://localhost:8080/phpmyadmin"
+    start "" /B "%XAMPP_DIR%\apache\bin\httpd.exe"
+    timeout /t 3 /nobreak >nul
+    tasklist /FI "IMAGENAME eq httpd.exe" 2>nul | find /I "httpd.exe" >nul
+    if !errorlevel! neq 0 (
+        color 0C
+        echo  [ERROR] Apache still could not start. Check
+        echo          C:\xampp\apache\logs\error.log for details, or start
+        echo          Apache from the XAMPP Control Panel to see the error.
+        pause
+        exit /b 1
+    )
+    echo  [OK] Apache is now running on port 8080.
+)
+if not defined PMA_URL set "PMA_URL=http://localhost/phpmyadmin"
 
 :: Wait for MySQL to accept connections (up to ~30s)
 set /a TRIES=0
 :wait_mysql
-"%XAMPP_DIR%\mysql\bin\mysqladmin.exe" -u root ping >nul 2>&1
+"%XAMPP_DIR%\mysql\bin\mysqladmin.exe" -h 127.0.0.1 -u root ping 2>nul | find /I "alive" >nul
 if %errorlevel% equ 0 goto mysql_ready
 set /a TRIES+=1
 if %TRIES% geq 30 (
@@ -199,7 +240,7 @@ if exist "%RS_DEST%\include\config.php" (
 echo.
 echo  ------------------------------------------------------------
 echo   ResourceSpace URL : %RS_URL%
-echo   phpMyAdmin        : http://localhost/phpmyadmin
+echo   phpMyAdmin        : %PMA_URL%
 echo   XAMPP Control     : %XAMPP_DIR%\xampp-control.exe
 echo   Run this setup.bat again any time to restart everything.
 echo  ------------------------------------------------------------

@@ -1,0 +1,45 @@
+COLLECTION ID FIX - QUICK TEST INSTRUCTIONS
+==========================================
+
+The fix is now complete. Here's how to test:
+
+METHOD 1: Test from Featured Collections Page (RECOMMENDED)
+------------------------------------------------------------
+1. Open: http://192.168.29.156/pages/collections_featured.php
+2. Click the "+" button or "Create New Collection"
+3. Enter any name (e.g., "Final Test")
+4. Click Create
+5. You should IMMEDIATELY see "Final Test (ID-XXXX)" on the page
+
+METHOD 2: Use Automated Test Script
+------------------------------------
+1. Open: http://192.168.29.156/test_create_and_check.php
+2. Click "Create Test Collection"
+3. All tests should show green checkmarks (✓)
+
+METHOD 3: Debug Existing Collection
+------------------------------------
+1. Open: http://192.168.29.156/debug_collection_name.php
+2. Enter a collection ID (e.g., 1119)
+3. Click Check
+4. Verify the name shows with ID in all sections
+
+WHAT WAS FIXED:
+---------------
+1. Enhanced cache clearing when collection is created
+2. Added cache clearing when featured collections page loads
+3. Added "reload=true" parameter to force cache refresh
+
+FILES MODIFIED:
+---------------
+- include/collections_functions.php (cache clearing)
+- pages/collections_featured.php (cache clearing on load)
+- pages/collection_manage.php (redirect with reload parameter)
+
+IF IT STILL DOESN'T WORK:
+--------------------------
+1. Clear browser cache (Ctrl+F5 or Cmd+Shift+R)
+2. Clear server cache: rm -rf filestore/tmp/*
+3. Check error log: tail -f /var/log/apache2/rs_error.log
+
+The collection ID should now appear IMMEDIATELY without any refresh!

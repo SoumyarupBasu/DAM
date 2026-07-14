@@ -1,0 +1,87 @@
+<?php
+###############################
+## ResourceSpace
+## Local Configuration Script
+###############################
+
+# All custom settings should be entered in this file.
+# Options may be copied from config.default.php and configured here.
+
+# MySQL database settings
+$mysql_server = 'localhost';
+$mysql_username = 'rs_prod_user';
+$mysql_password = 'Set_A_Very_Strong_Password';
+$read_only_db_username = 'rs_readonly';
+$read_only_db_password = 'ReadOnlyPassword123';
+$mysql_db = 'resourcespace';
+
+$mysql_bin_path = '/usr/bin';
+
+# Base URL of the installation
+$baseurl = 'http://192.168.1.2';
+
+# Email settings
+$email_notify = 'satish@ekvayu.com';
+$email_from = 'satish@ekvayu.com';
+# Secure keys
+$scramble_key = 'a31e3ea9a3f4f9cfd3650c063bf2e29e24b02139a19e1a6772d56123981b8241';
+$api_scramble_key = 'abfda546c0f474e09079221612dcc3ffa8e32a5a7b4dc82f1d0aac34d2091c72';
+
+# Paths
+$imagemagick_path = '/usr/bin';
+$ghostscript_path = '/usr/bin';
+$ffmpeg_path = '/usr/bin';
+$exiftool_path = '/usr/bin';
+$pdftotext_path = '/usr/bin';
+
+$applicationname = 'ResourceSpace';
+$homeanim_folder = 'filestore/system/slideshow_6ef326d0684e88f';
+
+/*
+
+New Installation Defaults
+-------------------------
+
+The following configuration options are set for new installations only.
+This provides a mechanism for enabling new features for new installations without affecting existing installations (as would occur with changes to config.default.php)
+
+*/
+                                
+// Set imagemagick default for new installs to expect the newer version with the sRGB bug fixed.
+$imagemagick_colorspace = "sRGB";
+
+$contact_link=false;
+$themes_simple_view=true;
+
+$stemming=true;
+$case_insensitive_username=true;
+$user_pref_user_management_notifications=true;
+
+$use_zip_extension=true;
+$collection_download=true;
+
+$ffmpeg_preview_force = true;
+$ffmpeg_preview_extension = 'mp4';
+$ffmpeg_preview_options = '-f mp4 -b:v 1200k -b:a 64k -ac 1 -c:v libx264 -pix_fmt yuv420p -profile:v baseline -level 3 -c:a aac -strict -2';
+
+$daterange_search = true;
+$upload_then_edit = true;
+
+$purge_temp_folder_age=90;
+$filestore_evenspread=true;
+
+$comments_resource_enable=true;
+
+$api_upload_urls = array();
+
+$use_native_input_for_date_field = true;
+$resource_view_use_pre = true;
+
+$sort_tabs = false;
+$maxyear_extends_current = 5;
+$thumbs_display_archive_state = true;
+$file_checksums = true;
+$hide_real_filepath = true;
+$annotate_enabled = true;
+
+$plugins[] = "brand_guidelines";

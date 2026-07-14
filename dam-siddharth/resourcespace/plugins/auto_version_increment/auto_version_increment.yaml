@@ -1,0 +1,9 @@
+name: auto_version_increment
+title: Auto Version Increment
+desc: Automatically increment version number when a file is replaced (e.g., 1 → 1.1 → 1.2)
+icon: fa fa-code-branch
+author: Custom Plugin
+version: 1.0
+default_priority: 100
+category: Asset Processing
+config_url: /plugins/auto_version_increment/pages/setup.php

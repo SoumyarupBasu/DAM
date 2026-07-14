@@ -1,0 +1,28 @@
+.rse_workflow_link{
+	cursor: pointer;
+	cursor: hand;
+}
+
+#ResourceWorkflowActions input {
+	width: 100%;
+    margin: 0 5px 0 5px;
+}
+
+#ResourceWorkflowTable {
+    width: 100%;
+}
+
+#ResourceWorkflowActions {
+    margin-right: 0;
+}
+
+#ResourceWorkflowActions input.wf-btn-reject {
+    background-color: #c0392b !important;
+    border-color: #c0392b !important;
+    color: #fff !important;
+}
+
+#ResourceWorkflowActions input.wf-btn-reject:hover {
+    background-color: #a93226 !important;
+    border-color: #a93226 !important;
+}
